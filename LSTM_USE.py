@@ -13,27 +13,27 @@ model = keras.models.load_model('lstm_model.h5')
 scaler = joblib.load('scaler.save')
 
 # データの読み込みとスケーリング
-new_df = yf.download("6919.T", start='2018-01-01', end=datetime.now(), interval="1d")
+new_df = yf.download("6209.T", start='2018-01-01', end=datetime.now(), interval="1d")
 new_data = new_df["Close"].values.reshape(-1, 1)
 scaled_new_data = scaler.transform(new_data)
 
 # データの70%を予測材料、残りの30%を未知の未来と仮定
-train_size = int(len(scaled_new_data) * 0.99)
+train_size = int(len(scaled_new_data) * 0.9)
 train_data = scaled_new_data[:train_size]
-future_days = int(len(scaled_new_data) * 0.01)  # 残り30%の日数を予測範囲に
+future_days = int(len(scaled_new_data) * 0.1)  # 残り30%の日数を予測範囲に
 
 # 予測の開始に使用する最新60日間
-last_60_days = train_data[-60:]
+last_60_days = train_data[-120:]
 future_predictions = []
 
 # 未来30%の日数分の予測を逐次生成
 for _ in range(future_days):
-    x_new_test = last_60_days.reshape(1, 60, 1)
+    x_new_test = last_60_days.reshape(1, 120, 1)
     predicted_price = model.predict(x_new_test)
     future_predictions.append(predicted_price[0, 0])
     
     # 予測値を次の入力に追加して最新の60日を更新
-    last_60_days = np.append(last_60_days, predicted_price)[-60:].reshape(-1, 1)
+    last_60_days = np.append(last_60_days, predicted_price)[-120:].reshape(-1, 1)
 
 # 予測結果をスケールバック
 future_predictions = scaler.inverse_transform(np.array(future_predictions).reshape(-1, 1))
